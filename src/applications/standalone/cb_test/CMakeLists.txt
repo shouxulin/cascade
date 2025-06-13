@@ -16,6 +16,11 @@ target_include_directories(producer_udl PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   )
 
+add_library(cb_udl SHARED cb_udl.cpp)
+target_include_directories(cb_udl PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+)
+
 
 add_custom_command(TARGET consumer_udl POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/cfg

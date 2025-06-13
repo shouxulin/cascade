@@ -85,17 +85,49 @@ double internal_perf_put(derecho::Replicated<CascadeType>& subgroup_handle, cons
     return (num_messages_sent)*1e9 / (now_ns - start_ns);
 }
 
+
+
 template <typename KT, typename VT, KT* IK, VT* IV>
 bool VolatileCascadeStore<KT, VT, IK, IV>::oob_send(uint64_t data_addr, uint64_t gpu_addr, uint64_t rkey, size_t size) const{
     // STEP 2 - do RDMA write to send the OOB data
-   dbg_default_debug("called oob_send with, data_addr={}, gpu_addr={}, rkey={}, size={}", data_addr, gpu_addr, rkey, size);
+    dbg_default_debug("called oob_send with, data_addr={}, gpu_addr={}, rkey={}, size={}", data_addr, gpu_addr, rkey, size);
        	auto& subgroup_handle = group->template get_subgroup<VolatileCascadeStore>(this->subgroup_index);
+        
+    int repeat = 5;
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < repeat; i++)
+    {
         struct iovec iov;
-	iov.iov_base    = reinterpret_cast<void*>(data_addr);                        iov.iov_len     = static_cast<size_t>(size);
-       subgroup_handle.oob_remote_write(group->get_rpc_caller_id(),&iov,1,gpu_addr,rkey,size);
-       dbg_default_debug("Finished ASYNC oob remote write Derecho call");
-       subgroup_handle.wait_for_oob_op(group->get_rpc_caller_id(),OOB_OP_WRITE,1000);
-       dbg_default_debug("FINISHED OOB REMOTE WRITE");
+        iov.iov_base    = reinterpret_cast<void*>(data_addr);                        iov.iov_len     = static_cast<size_t>(size);
+        subgroup_handle.oob_remote_write(group->get_rpc_caller_id(),&iov,1,gpu_addr,rkey,size);
+        dbg_default_debug("Finished ASYNC oob remote write Derecho call");
+        //    subgroup_handle.wait_for_oob_op(group->get_rpc_caller_id(),OOB_OP_WRITE,1000);
+        subgroup_handle.wait_for_oob_op(group->get_rpc_caller_id(),OOB_OP_WRITE,1e6);
+        dbg_default_debug("FINISHED OOB REMOTE WRITE");
+    }
+
+    // 3. Record end time
+    auto end = std::chrono::high_resolution_clock::now();
+
+    // 4. Compute duration in microseconds
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+
+    std::cout << "FINISHED OOB Remote Write in " << us << " microseconds"  << " throughput: " << size / 1e9 / (us/1e6) * repeat << "GB/s" << std::endl;
+
+
+
+
+
+
+    
+	// iov.iov_base    = reinterpret_cast<void*>(data_addr);                        iov.iov_len     = static_cast<size_t>(size);
+    //    subgroup_handle.oob_remote_write(group->get_rpc_caller_id(),&iov,1,gpu_addr,rkey,size);
+    //    dbg_default_debug("Finished ASYNC oob remote write Derecho call");
+    // //    subgroup_handle.wait_for_oob_op(group->get_rpc_caller_id(),OOB_OP_WRITE,1000);
+    //    subgroup_handle.wait_for_oob_op(group->get_rpc_caller_id(),OOB_OP_WRITE,1e6);
+    //    dbg_default_debug("FINISHED OOB REMOTE WRITE");
        
        std::cout << "FINISHED OOB Remote Write" << std::endl;
        return true;

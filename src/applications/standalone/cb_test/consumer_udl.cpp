@@ -25,10 +25,10 @@ class ConsumerOCDPO : public DefaultOffCriticalDataPathObserver {
 
 private:
     static std::shared_ptr<OffCriticalDataPathObserver> ocdpo_ptr;
-    uint64_t head_ptr;
-    uint64_t tail_ptr;
+    uint64_t* head_ptr;
+    uint64_t* tail_ptr;
     uint64_t rkey;
-    uint64_t cbuffer_ptr;
+    uint64_t* cbuffer_ptr;
     void* oob_mr_ptr = nullptr;
 
     // Hardcode to run on n1
@@ -44,10 +44,12 @@ private:
         if (key_string.find("init_cb") != std::string::npos) {
             // TODO: properly initialize the pointers and circular buffer
             // 1. Initialize circular buffer 
-            head_ptr = 1;
-            tail_ptr = 0;
+            // head_ptr = 1;
+            size_t buff_size = 128ul << 20; // 128 MB
+            head_ptr = (uint64_t*) aligned_alloc(64, sizeof(head_ptr));
+            tail_ptr = (uint64_t*) aligned_alloc(64, sizeof(tail_ptr));
             rkey = 0;
-            cbuffer_ptr = 0;
+            cbuffer_ptr = (uint64_t*) aligned_alloc(4096, buff_size);
             std::cout << "\"init_cb\" found in the string.\n";
             // 2. Send the circular buffer information to the producer
             std::string message = std::to_string(head_ptr) + "/" + std::to_string(tail_ptr) + "/" +
