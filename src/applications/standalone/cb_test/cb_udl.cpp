@@ -17,6 +17,7 @@ std::string get_description() {
 
 class OOBOCDPO : public OffCriticalDataPathObserver {
     void* oob_mr_ptr = nullptr;
+    size_t oob_mr_size = 0;
 
     virtual void operator()(const derecho::node_id_t sender,
                             const std::string& key_string,
@@ -68,6 +69,7 @@ class OOBOCDPO : public OffCriticalDataPathObserver {
             size_t oob_mr_size = 128ul << 20;
             // size_t oob_data_size = 256;
             size_t oob_data_size = oob_mr_size;
+            this->oob_mr_size = oob_mr_size;
             this->oob_mr_ptr = aligned_alloc(4096, oob_mr_size);
 
             derecho::memory_attribute_t attr;
@@ -91,7 +93,16 @@ class OOBOCDPO : public OffCriticalDataPathObserver {
         } else if(tokens[1] == "check") {
             std::cout << "CHECK" << std::endl;
             uint8_t* byte_ptr = reinterpret_cast<uint8_t*>(this->oob_mr_ptr);
-            std::cout << "Recieved: " << static_cast<char>(byte_ptr[1]) << std::endl;
+            // 
+            std::cout << "OOB Memory Content: ";
+            for(size_t i = 0; i < oob_mr_size; ++i) {
+                if (static_cast<char>(byte_ptr[i]) != 'a') {
+                    std::cout << "Byte " << i << ": " << static_cast<char>(byte_ptr[i]) << " ";
+                }
+            }
+            std::cout << std::endl;
+            
+            // std::cout << "Recieved: " << static_cast<char>(byte_ptr[1]) << std::endl;
         } else {
             std::cout << "Unsupported oob operation called!" << std::endl;
         }
